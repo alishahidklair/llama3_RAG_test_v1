@@ -1,18 +1,19 @@
 from rag_chain import llm, retriever
-import threading
-import time
+import gradio as gr
+from pathlib import Path
+import sys
 
-def thinking_dots():
-    while not done:
-        print(".", end="", flush=True)
-        time.sleep(0.5)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 
-while True:
-    query = input("\nAsk something (or 'exit'): ")
-    if query.lower() == "exit":
-        break
 
-    # Retrieve relevant document chunks
+def answer_query(query: str) -> str:
+    """
+    Handles a single user query using the RAG retriever and LLaMA LLM.
+    Returns the response text.
+    """
+
+    # Use the previously working call
     docs = retriever.invoke(query)
     context = "\n\n".join([doc.page_content for doc in docs])
 
@@ -28,16 +29,27 @@ Question:
 {query}
 """
 
-    # Show thinking dots while model is processing
-    done = False
-    t = threading.Thread(target=thinking_dots)
-    t.start()
-
-    # Blocking call (CPU will take 2–5 min per reply)
     response = llm.invoke(prompt)
 
-    # Stop spinner
-    done = True
-    t.join()
+    # Optionally append sources
+    if docs:
+        sources = [Path(doc.metadata.get("source", "Unknown")).name for doc in docs]
+        response += "\n\nSources: " + ", ".join(sources)
 
-    print("\nAnswer:\n", response)
+    return response
+
+
+
+# -----------------------------
+# Launch Gradio interface
+# -----------------------------
+iface = gr.Interface(
+    fn=answer_query,
+    inputs=gr.Textbox(lines=2, placeholder="Ask a question..."),
+    outputs="text",
+    title="RAG Chatbot",
+    description="Ask questions about your documents. Answers are based only on provided context.",
+)
+
+if __name__ == "__main__":
+    iface.launch(share=True, pwa=True)

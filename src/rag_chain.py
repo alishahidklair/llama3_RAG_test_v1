@@ -1,5 +1,7 @@
 import os
 import torch
+from pathlib import Path
+
 from langchain_ollama import OllamaLLM
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -14,7 +16,8 @@ torch.set_num_interop_threads(12)
 
 
 
-INDEX_PATH = "../vectorstore/faiss_index"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+INDEX_PATH = PROJECT_ROOT / "vectorstore" / "faiss_index"
 
 # --- Use environment variable to control threads ---
 os.environ["OMP_NUM_THREADS"] = "12"  # Use all logical CPU cores
@@ -35,4 +38,4 @@ embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-
 
 # Load FAISS index
 db = FAISS.load_local(INDEX_PATH, embeddings, allow_dangerous_deserialization=True)
-retriever = db.as_retriever(search_kwargs={"k": 4})
+retriever = db.as_retriever(search_kwargs={"k": 6})
